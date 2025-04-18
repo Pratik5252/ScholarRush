@@ -26,7 +26,7 @@
 
 2. **Clone the Repository**
 
-   ```bash
+   ```
    git clone <repository-url>
    cd ScholarRush/server
    ```
@@ -41,10 +41,10 @@
 
 4. Running the Server
 
-    ```bash
-    # This will run the server and install dependencies
-    uv run main.py
-    ```
+   ```bash
+   # This will run the server and install dependencies
+   uv run main.py
+   ```
 
 ## To Install Additional Dependencies
 
@@ -69,7 +69,6 @@ POST /evaluate/stream
 ```
 
 Performs full application evaluation
-
 
 **Request Body:**
 
