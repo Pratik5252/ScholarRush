@@ -9,8 +9,11 @@ async def calculate_scores(data: Dict[str, Any]) -> EvaluationResult:
     financial = await _calculate_financial_score(data)
     essay = await _calculate_essay_score(data)
 
-    # Weighted overall score
+    # Weighted overall score (all components are already 0-10)
     overall = (academic * 0.4) + (financial * 0.3) + (essay * 0.3)
+
+    # Ensure overall score is capped at 10
+    overall = min(overall, 10.0)
 
     # Determine decision based on overall score
     decision = (
@@ -32,11 +35,32 @@ async def _calculate_academic_score(data: Dict[str, Any]) -> float:
     """Calculate academic merit score (0-10)"""
     gpa = data.get("gpa", 0)
     test_scores = data.get("test_scores", {})
+
     # Normalize GPA to 0-10 scale
     gpa_score = (gpa / 4.0) * 10 if gpa else 0
-    # Calculate test score average
-    test_avg = np.mean([v for v in test_scores.values()]) if test_scores else 0
-    return (gpa_score * 0.6) + (test_avg * 0.4)
+
+    # Normalize test scores to 0-10 scale
+    normalized_scores = []
+    if "SAT" in test_scores:
+        # SAT range 400-1600 -> 0-10
+        sat_score = test_scores["SAT"]
+        normalized_scores.append(
+            min((sat_score - 400) / 120, 10.0)
+        )  # 120 points per point on 10 scale
+    if "ACT" in test_scores:
+        # ACT range 1-36 -> 0-10
+        act_score = test_scores["ACT"]
+        normalized_scores.append(
+            min((act_score - 1) / 3.5, 10.0)
+        )  # 3.5 points per point on 10 scale
+
+    test_avg = np.mean(normalized_scores) if normalized_scores else 0
+
+    # Calculate final academic score
+    academic_score = (gpa_score * 0.6) + (test_avg * 0.4)
+
+    # Ensure academic score is capped at 10
+    return min(academic_score, 10.0)
 
 
 async def _calculate_financial_score(data: Dict[str, Any]) -> float:
@@ -49,15 +73,16 @@ async def _calculate_financial_score(data: Dict[str, Any]) -> float:
 
     # Calculate income per capita
     income_per_capita = income / family_size
+
     # Normalize to 0-10 scale (lower income = higher score)
     if income_per_capita < 10000:
-        return 9.0 + (np.random.random() * 1.0)  # 9-10
+        return min(9.0 + (np.random.random() * 1.0), 10.0)  # 9-10
     elif income_per_capita < 20000:
-        return 7.0 + (np.random.random() * 2.0)  # 7-9
+        return min(7.0 + (np.random.random() * 2.0), 10.0)  # 7-9
     elif income_per_capita < 40000:
-        return 5.0 + (np.random.random() * 2.0)  # 5-7
+        return min(5.0 + (np.random.random() * 2.0), 10.0)  # 5-7
     else:
-        return 3.0 + (np.random.random() * 2.0)  # 3-5
+        return min(3.0 + (np.random.random() * 2.0), 10.0)  # 3-5
 
 
 async def _calculate_essay_score(data: Dict[str, Any]) -> float:
@@ -80,4 +105,4 @@ async def _calculate_essay_score(data: Dict[str, Any]) -> float:
         base_score = 9.0
 
     # Add some randomness to simulate human evaluation
-    return base_score + (np.random.random() * 1.0)
+    return min(base_score + (np.random.random() * 1.0), 10.0)  # Cap at 10

@@ -20,16 +20,22 @@ class GroqEvaluator:
         # Get scores from evaluation logic
         scores = await calculate_scores(cleaned_data)
 
+        # Ensure all scores are within 0-10 range
+        academic_score = min(max(scores.academic_score, 0), 10)
+        financial_score = min(max(scores.financial_score, 0), 10)
+        essay_score = min(max(scores.essay_score, 0), 10)
+        overall_score = min(max(scores.overall_score, 0), 10)
+
         # Generate detailed evaluation with Groq
         evaluation_text = await self._generate_evaluation(cleaned_data, scores)
 
-        # Create new EvaluationResult with all fields
+        # Create new EvaluationResult with validated scores
         return EvaluationResult(
             applicant_id=scores.applicant_id,
-            academic_score=scores.academic_score,
-            financial_score=scores.financial_score,
-            essay_score=scores.essay_score,
-            overall_score=scores.overall_score,
+            academic_score=academic_score,
+            financial_score=financial_score,
+            essay_score=essay_score,
+            overall_score=overall_score,
             evaluation=evaluation_text,
             decision=scores.decision,
             flags=scores.flags,
