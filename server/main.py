@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from config import settings
+from routers import evaluation
 import uvicorn
 import os
 
@@ -26,6 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Include routers
+app.include_router(evaluation.router)
 
 @app.get("/health")
 async def health_check():
