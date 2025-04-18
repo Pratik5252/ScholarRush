@@ -1,6 +1,8 @@
 from typing import Dict, Any
 import numpy as np
 from models.schemas import ApplicationData, EvaluationResult
+from services.groq_service import GroqEvaluator
+import re
 
 
 async def calculate_scores(data: Dict[str, Any]) -> EvaluationResult:
@@ -86,23 +88,66 @@ async def _calculate_financial_score(data: Dict[str, Any]) -> float:
 
 
 async def _calculate_essay_score(data: Dict[str, Any]) -> float:
-    """Calculate essay quality score (0-10)"""
+    """Calculate essay quality score (0-10) using Groq AI analysis"""
     essay = data.get("essay", "")
     if not essay:
         return 0.0
 
-    # Basic scoring based on essay length and content
-    word_count = len(essay.split())
+    try:
+        # Use existing GroqEvaluator
+        evaluator = GroqEvaluator()
 
-    # Score based on length (encouraging detailed essays)
-    if word_count < 100:
-        base_score = 3.0
-    elif word_count < 300:
-        base_score = 5.0
-    elif word_count < 500:
-        base_score = 7.0
-    else:
-        base_score = 9.0
+        # Create a detailed prompt for essay evaluation
+        evaluation_prompt = f"""
+        Please evaluate this scholarship essay on a scale of 0-10 based on the following criteria:
+        1. Grammar and Mechanics (20%)
+        2. Structure and Organization (20%)
+        3. Content and Relevance (30%)
+        4. Clarity and Coherence (20%)
+        5. Originality and Insight (10%)
 
-    # Add some randomness to simulate human evaluation
-    return min(base_score + (np.random.random() * 1.0), 10.0)  # Cap at 10
+        Essay:
+        {essay}
+
+        Provide a detailed evaluation and a final score between 0-10.
+        """
+
+        # Get evaluation from Groq using the existing client
+        response = await evaluator.client.chat.completions.create(
+            model=evaluator.model,
+            messages=[{"role": "user", "content": evaluation_prompt}],
+            temperature=0.3,  # More deterministic output
+            max_tokens=500,
+        )
+
+        # Extract score from the response
+        evaluation_text = response.choices[0].message.content
+        score_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:/|out of)\s*10", evaluation_text)
+
+        if score_match:
+            score = float(score_match.group(1))
+            return min(max(score, 0.0), 10.0)  # Ensure score is between 0-10
+        else:
+            # If no score found, use a fallback based on word count
+            word_count = len(essay.split())
+            if word_count < 100:
+                return 3.0
+            elif word_count < 300:
+                return 5.0
+            elif word_count < 500:
+                return 7.0
+            else:
+                return 9.0
+
+    except Exception as e:
+        print(f"Error in essay evaluation: {str(e)}")
+        # Fallback to basic scoring if Groq evaluation fails
+        word_count = len(essay.split())
+        if word_count < 100:
+            return 3.0
+        elif word_count < 300:
+            return 5.0
+        elif word_count < 500:
+            return 7.0
+        else:
+            return 9.0
