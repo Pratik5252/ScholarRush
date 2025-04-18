@@ -48,8 +48,7 @@
 
 ## To Install Additional Dependencies
 
-```
-bash
+```bash
    # Install dependencies
    uv add dependencies_name
 ```
