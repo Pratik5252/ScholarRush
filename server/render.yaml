@@ -7,7 +7,7 @@ services:
     buildCommand: |
       curl -LsSf https://astral.sh/uv/install.sh | sh
       $HOME/.cargo/bin/uv pip install .
-    startCommand: uv run
+    startCommand: uv run main.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
